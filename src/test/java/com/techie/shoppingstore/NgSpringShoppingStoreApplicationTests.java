@@ -1,5 +1,6 @@
 package com.techie.shoppingstore;
 
+import com.techie.shoppingstore.model.Category;
 import com.techie.shoppingstore.model.Product;
 import com.techie.shoppingstore.model.ProductAttribute;
 import com.techie.shoppingstore.repository.CategoryRepository;
@@ -26,9 +27,8 @@ public class NgSpringShoppingStoreApplicationTests {
 
     @Test
     public void contextLoads() {
-        List<Product> products = new ArrayList<>();
-        Product product = new Product("prod_samsung_s8", "Samsung Galaxy Note 8", "Samsung Galaxy Note 8", new BigDecimal(572), "https://static.digitecgalaxus.ch/Files/8/3/1/4/1/4/4/SM_N950F_GalaxyNote8_Front_Pen_Black_SESG.jpg?fit=inside%7C302:192&output-format=progressive-jpeg",
-                "Mobile Phonees",
+        Product product = new Product(123246L, "Samsung Galaxy Note 8", "Samsung Galaxy Note 8", new BigDecimal(572), "https://static.digitecgalaxus.ch/Files/8/3/1/4/1/4/4/SM_N950F_GalaxyNote8_Front_Pen_Black_SESG.jpg?fit=inside%7C302:192&output-format=progressive-jpeg",
+                new Category(1234L, "Mobile Phonees"),
                 createProductAttributes(),
                 1000,
                 "Samsung",

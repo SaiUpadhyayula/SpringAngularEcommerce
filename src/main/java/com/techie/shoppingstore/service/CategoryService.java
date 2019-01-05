@@ -15,15 +15,13 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    public CategoryDto findAll() {
+    public List<CategoryDto> findAll() {
         List<Category> categories = categoryRepository.findAll();
 
-        List<String> categoryNames = categories
+        return categories
                 .stream()
-                .map(Category::getName)
+                .map(category -> new CategoryDto(category.getName()))
                 .collect(Collectors.toList());
-
-        return new CategoryDto(categoryNames);
 
     }
 }

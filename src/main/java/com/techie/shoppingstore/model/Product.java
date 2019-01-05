@@ -15,12 +15,12 @@ import java.util.List;
 @NoArgsConstructor
 public class Product {
     @Id
-    private String id;
+    private Long id;
     private String name;
     private String description;
     private BigDecimal price;
     private String imageUrl;
-    private String categoryName;
+    private Category category;
     private List<ProductAttribute> productAttributeList;
     private Integer quantity;
     private String manufacturer;

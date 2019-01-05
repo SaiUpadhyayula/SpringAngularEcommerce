@@ -21,7 +21,7 @@ public class CatalogController {
     private final ProductService productService;
 
     @GetMapping("/categories/")
-    public ResponseEntity<CategoryDto> readCategories() {
+    public ResponseEntity<List<CategoryDto>> readCategories() {
         return new ResponseEntity<>(categoryService.findAll(), HttpStatus.OK);
     }
 

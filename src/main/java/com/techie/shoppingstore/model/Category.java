@@ -12,6 +12,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @AllArgsConstructor
 public class Category {
     @Id
-    private String id;
+    private Long id;
     private String name;
 }

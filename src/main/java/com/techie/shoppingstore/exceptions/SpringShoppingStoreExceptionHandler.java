@@ -19,10 +19,8 @@ public class SpringShoppingStoreExceptionHandler extends ResponseEntityException
         return handleExceptionInternal(exception, message(HttpStatus.BAD_REQUEST, exception), headers, HttpStatus.BAD_REQUEST, request);
     }
 
-    private ApiError message(HttpStatus httpStatus, Exception exception) {
+    private ApiResponse message(HttpStatus httpStatus, Exception exception) {
         String message = exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
-        String developerMessage = exception.getClass().getSimpleName();
-
-        return new ApiError(httpStatus.value(), message, developerMessage);
+        return new ApiResponse(httpStatus.value(), message);
     }
 }
