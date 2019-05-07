@@ -1,6 +1,8 @@
 # NgSpringShoppingStore
 NgSpringShoppingStore is a shopping cart application developed as a pet project to get to know about different technologies.
 
+This project is still in development.
+
 #Features
 - User Signup and Login
 - Payment Gateway (using Stripe)
