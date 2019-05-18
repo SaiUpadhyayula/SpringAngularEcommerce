@@ -3,9 +3,14 @@ package com.techie.shoppingstore.service;
 import com.techie.shoppingstore.dto.AuthenticationResponse;
 import com.techie.shoppingstore.dto.LoginRequestDto;
 import com.techie.shoppingstore.dto.RegisterRequestDto;
+import com.techie.shoppingstore.exceptions.ApiResponse;
+import com.techie.shoppingstore.exceptions.SpringStoreException;
 import com.techie.shoppingstore.model.User;
+import com.techie.shoppingstore.model.VerificationToken;
 import com.techie.shoppingstore.repository.UserRepository;
+import com.techie.shoppingstore.repository.VerificationTokenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -14,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -26,6 +32,14 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+    @Autowired
+    private MailContentBuilder mailContentBuilder;
+    @Autowired
+    private MailService mailService;
+    @Autowired
+    private VerificationTokenRepository verificationTokenRepository;
+    @Value("${account.verification.url}")
+    private String accountVerificationUrl;
 
     public boolean existsByUserName(RegisterRequestDto registerRequestDto) {
         return userRepository.existsByUsername(registerRequestDto.getUsername());
@@ -37,7 +51,22 @@ public class AuthService {
         User user = new User(registerRequestDto.getEmail(),
                 registerRequestDto.getUsername(),
                 encodedPassword);
+        user.setEnabled(false);
         userRepository.save(user);
+
+        String token = generateVerificationToken(user);
+        String message = mailContentBuilder.build("Thank you for signing up for Spring Store, to activate your account, please click on the below url : " + accountVerificationUrl + "/" + token);
+
+        mailService.sendMail(user.getEmail(), message);
+    }
+
+    private String generateVerificationToken(User user) {
+        String token = UUID.randomUUID().toString();
+        VerificationToken verificationToken = new VerificationToken();
+        verificationToken.setToken(token);
+        verificationToken.setUser(user);
+        verificationTokenRepository.save(verificationToken);
+        return token;
     }
 
     public AuthenticationResponse authenticate(LoginRequestDto loginRequestDto) {
@@ -55,5 +84,22 @@ public class AuthService {
     Optional<org.springframework.security.core.userdetails.User> getCurrentUser() {
         org.springframework.security.core.userdetails.User principal = (org.springframework.security.core.userdetails.User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return Optional.of(principal);
+    }
+
+    public ApiResponse verifyAccount(String token) {
+        Optional<VerificationToken> verificationTokenOptional = verificationTokenRepository.findByToken(token);
+        if (verificationTokenOptional.isPresent()) {
+            fetchUserAndEnable(verificationTokenOptional.get());
+            return new ApiResponse(200, "User is Enabled");
+        } else {
+            return new ApiResponse(400, "Invalid Token");
+        }
+    }
+
+    private void fetchUserAndEnable(VerificationToken verificationToken) {
+        String username = verificationToken.getUser().getUsername();
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new SpringStoreException("User Not Found with id - " + username));
+        user.setEnabled(true);
+        userRepository.save(user);
     }
 }

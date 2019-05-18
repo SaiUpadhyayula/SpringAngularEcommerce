@@ -23,6 +23,7 @@ public class User {
     @Transient
     @NotEmpty(message = "Password Confirmation is Required")
     private String passwordConfirmation;
+    private boolean enabled;
 
     public User(String email, String username, String password) {
         this.email = email;

@@ -56,4 +56,9 @@ public class ProductService {
         List<Product> products = productRepository.findByCategory(category);
         return products.stream().map(this::mapToDto).collect(Collectors.toList());
     }
+
+    public void save(ProductDto productDto) {
+        Product product = new Product();
+        product.setName(productDto.getProductName());
+    }
 }

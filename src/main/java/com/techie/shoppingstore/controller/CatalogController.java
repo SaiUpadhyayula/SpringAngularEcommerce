@@ -7,10 +7,7 @@ import com.techie.shoppingstore.service.ProductService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -42,5 +39,10 @@ public class CatalogController {
     public ResponseEntity<List<ProductDto>> readProductByCategory(@PathVariable String categoryName) {
         List<ProductDto> productDtos = productService.findByCategoryName(categoryName);
         return new ResponseEntity<>(productDtos, HttpStatus.OK);
+    }
+
+    @PostMapping
+    public void saveProduct(@PathVariable ProductDto productDto) {
+        productService.save(productDto);
     }
 }

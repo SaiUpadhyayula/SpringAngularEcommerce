@@ -2,7 +2,6 @@ package com.techie.shoppingstore.config;
 
 import com.techie.shoppingstore.repository.UserRepository;
 import com.techie.shoppingstore.service.JWTAuthenticationFilter;
-import org.apache.catalina.filters.CorsFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
@@ -63,6 +62,8 @@ public class AppSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .authorizeRequests()
                 .antMatchers("/api/auth/**")
+                .permitAll()
+                .antMatchers("/store/catalog/**")
                 .permitAll()
                 .anyRequest().authenticated();
 
