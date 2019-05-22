@@ -5,6 +5,8 @@ import com.techie.shoppingstore.dto.ProductDto;
 import com.techie.shoppingstore.service.CategoryService;
 import com.techie.shoppingstore.service.ProductService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,8 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/store/catalog/")
+@RequestMapping("/api/store/catalog/")
 @AllArgsConstructor
+@Slf4j
 public class CatalogController {
     private final CategoryService categoryService;
     private final ProductService productService;
@@ -30,8 +33,8 @@ public class CatalogController {
     }
 
     @GetMapping("products/{productName}")
-    public ResponseEntity<ProductDto> readProductByName(@PathVariable String productName) {
-        ProductDto productDto = productService.findByProductName(productName);
+    public ResponseEntity<ProductDto> readOneProduct(@PathVariable String productName) {
+        ProductDto productDto = productService.readOneProduct(productName);
         return new ResponseEntity<>(productDto, HttpStatus.OK);
     }
 

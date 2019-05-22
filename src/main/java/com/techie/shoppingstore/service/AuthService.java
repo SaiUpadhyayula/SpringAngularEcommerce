@@ -55,7 +55,8 @@ public class AuthService {
         userRepository.save(user);
 
         String token = generateVerificationToken(user);
-        String message = mailContentBuilder.build("Thank you for signing up for Spring Store, to activate your account, please click on the below url : " + accountVerificationUrl + "/" + token);
+        String message = mailContentBuilder.build("Thank you for signing up to Spring Store, please click on the below url to activate your account : "
+                + accountVerificationUrl + "/" + token);
 
         mailService.sendMail(user.getEmail(), message);
     }
