@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StopWatch;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,10 +24,14 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
 
-    @Cacheable(value = "products")
+    @Cacheable(value = "products1")
     public List<ProductDto> findAll() {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
         List<Product> all = productRepository.findAll();
         log.info("Found {} products..", all.size());
+        stopWatch.stop();
+        log.info("Time taken to load {} products is {}", all.size(), stopWatch.getTotalTimeSeconds());
         return all
                 .stream()
                 .map(this::mapToDto)

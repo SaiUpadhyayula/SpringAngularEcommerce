@@ -10,6 +10,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.util.StopWatch;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -27,6 +28,9 @@ public class NgSpringShoppingStoreApplicationTests {
 
     @Test
     public void contextLoads() {
+        System.out.print("Seeding Data base");
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
         List<Product> products = new ArrayList<>();
 
         Product product1 = new Product(123256L, "Apple iPhone SE", "Apple iPhone SE 4 inch, 32GB, 12 MP, Space Gray", new BigDecimal(349), "Apple-iPhone-SE", "https://static.digitecgalaxus.ch/Files/7/5/1/1/2/9/8/iPhoneSE_SpGry_PureAngles_ROW_WW-EN-SCREEN.jpg?fit=inside%7C242:102&output-format=progressive-jpeg",
@@ -77,21 +81,27 @@ public class NgSpringShoppingStoreApplicationTests {
                 false);
         products.add(product6);
 
-        Product product7 = new Product(334999L, "Apple iPhone XS", "Apple iPhone XS 5.80 inch, 256 GB, 12 MP, Space Gray", new BigDecimal(339), "Apple-iPhone-XS", "https://static.digitecgalaxus.ch/Files/1/6/5/3/4/8/2/4/iPhoneXs_SpaceGray_PureAngles_Q418_SCREEN.jpg?fit=inside%7C242:102&output-format=progressive-jpeg",
-                new Category(123498L, "Mobile Phonees"),
-                createProductAttributes(),
-                1000,
-                "Apple",
-                true);
-        products.add(product7);
-
-        Product product8 = new Product(334999L, "Apple iPhone XR", "Apple iPhone XR 6.10 inch, 128 GB, 12 MP, Black", new BigDecimal(339), "Apple-iPhone-XR", "https://static.digitecgalaxus.ch/Files/1/6/5/3/4/7/8/3/iPhoneXr_Black_PureAngles_Q418_SCREEN.jpg?fit=inside%7C242:102&output-format=progressive-jpeg",
+        long MOBILE_ID = 334999L;
+        Product product8 = new Product(MOBILE_ID, "Apple iPhone XR", "Apple iPhone XR 6.10 inch, 128 GB, 12 MP, Black", new BigDecimal(339), "Apple-iPhone-XR", "https://static.digitecgalaxus.ch/Files/1/6/5/3/4/7/8/3/iPhoneXr_Black_PureAngles_Q418_SCREEN.jpg?fit=inside%7C242:102&output-format=progressive-jpeg",
                 new Category(123498L, "Mobile Phonees"),
                 createProductAttributes(),
                 1000,
                 "Apple",
                 true);
         products.add(product8);
+
+
+        for (int j = 0; j < 10000; j++) {
+            MOBILE_ID = MOBILE_ID + 1;
+            Product product = new Product(MOBILE_ID, "Apple iPhone " + j, "Lenovo Tab 7 Essential 7 inch, 16 GB, Slate Black", new BigDecimal(339), "", "https://static.digitecgalaxus.ch/Files/1/4/7/7/3/0/1/7/753437.jpg?fit=inside%7C242:102&output-format=progressive-jpeg",
+                    new Category(123499L, "Tablets"),
+                    createProductAttributes(),
+                    1000,
+                    "Apple",
+                    true);
+            products.add(product);
+        }
+
 
         Product product9 = new Product(3349879L, "Apple iPad Pro", "Apple iPad Pro (2018) 11 inch, 256 GB, Space Gray", new BigDecimal(339), "Apple-iPad-Pro", "https://static.digitecgalaxus.ch/Files/1/7/6/2/3/9/4/0/iPadPro129Cell-SpaceGray_2Up_US-EN-SCREEN.png?fit=inside%7C242:102&output-format=progressive-jpeg",
                 new Category(123499L, "Tablets"),
@@ -101,7 +111,8 @@ public class NgSpringShoppingStoreApplicationTests {
                 true);
         products.add(product9);
 
-        Product product10 = new Product(11349879L, "Lenovo Tab 7 Essential", "Lenovo Tab 7 Essential 7 inch, 16 GB, Slate Black", new BigDecimal(339), "", "https://static.digitecgalaxus.ch/Files/1/4/7/7/3/0/1/7/753437.jpg?fit=inside%7C242:102&output-format=progressive-jpeg",
+        long ID = 11349879L;
+        Product product10 = new Product(ID, "Lenovo Tab 7 Essential", "Lenovo Tab 7 Essential 7 inch, 16 GB, Slate Black", new BigDecimal(339), "", "https://static.digitecgalaxus.ch/Files/1/4/7/7/3/0/1/7/753437.jpg?fit=inside%7C242:102&output-format=progressive-jpeg",
                 new Category(123499L, "Tablets"),
                 createProductAttributes(),
                 1000,
@@ -109,8 +120,25 @@ public class NgSpringShoppingStoreApplicationTests {
                 true);
         products.add(product10);
 
+        for (int i = 0; i < 10000; i++) {
+            ID = ID + 1;
+            Product product = new Product(ID, "Lenovo Tab " + i + " Essential " + i + 450, "Lenovo Tab 7 Essential 7 inch, 16 GB, Slate Black", new BigDecimal(339), "", "https://static.digitecgalaxus.ch/Files/1/4/7/7/3/0/1/7/753437.jpg?fit=inside%7C242:102&output-format=progressive-jpeg",
+                    new Category(123499L, "Tablets"),
+                    createProductAttributes(),
+                    1000,
+                    "Apple",
+                    true);
+            products.add(product);
+        }
+
         productRepository.saveAll(products);
 
+        stopWatch.stop();
+
+        double totalTimeSeconds = stopWatch.getTotalTimeSeconds();
+        System.out
+                .println("Total time taken to seed " + products.size() + " products into database : " + totalTimeSeconds)
+        ;
         List<Category> categories = new ArrayList<>();
         Category mobilePhoneCategory = new Category(123456L, "Mobile Phones");
         categories.add(mobilePhoneCategory);

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StopWatch;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,7 +29,12 @@ public class CatalogController {
 
     @GetMapping("products")
     public ResponseEntity<List<ProductDto>> readAllProducts() {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
         List<ProductDto> productDtos = productService.findAll();
+        stopWatch.stop();
+
+        log.info("Time taken to load {} products is {}", productDtos.size(), stopWatch.getTotalTimeSeconds());
         return new ResponseEntity<>(productDtos, HttpStatus.OK);
     }
 
