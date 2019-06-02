@@ -1,0 +1,51 @@
+{ 
+    "_id" : NumberLong(123456), 
+    "name" : "Mobile Phones", 
+    "possibleFacets" : [
+        "Brand", 
+        "4G", 
+        "Fingerprint Recognition", 
+        "Battery Capacity", 
+        "Battery Type", 
+        "Glass Type", 
+        "Hybrid SIM Slot", 
+        "Internal Storage", 
+        "Memory(RAM)", 
+        "Operating System", 
+        "SIM Type", 
+        "Primary Camera", 
+        "Screen Size (Diagonal)", 
+        "Selfie Camera"
+    ], 
+    "_class" : "com.techie.shoppingstore.model.Category"
+}
+{ 
+    "_id" : NumberLong(145456), 
+    "name" : "Laptops", 
+    "_class" : "com.techie.shoppingstore.model.Category"
+}
+{ 
+    "_id" : NumberLong(167456), 
+    "name" : "Tablets", 
+    "_class" : "com.techie.shoppingstore.model.Category"
+}
+{ 
+    "_id" : NumberLong(189456), 
+    "name" : "Gaming", 
+    "_class" : "com.techie.shoppingstore.model.Category"
+}
+{ 
+    "_id" : NumberLong(101456), 
+    "name" : "Cameras", 
+    "_class" : "com.techie.shoppingstore.model.Category"
+}
+{ 
+    "_id" : NumberLong(191456), 
+    "name" : "Smart Watches", 
+    "_class" : "com.techie.shoppingstore.model.Category"
+}
+{ 
+    "_id" : NumberLong(192456), 
+    "name" : "Headphones & Headsets", 
+    "_class" : "com.techie.shoppingstore.model.Category"
+}

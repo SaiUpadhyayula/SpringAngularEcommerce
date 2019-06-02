@@ -15,6 +15,7 @@ import java.util.List;
 public class ProductDto implements Serializable {
     private String productName;
     private String imageUrl;
+    private String sku;
     private BigDecimal price;
     private String description;
     private String manufacturer;
