@@ -1,0 +1,24 @@
+{ 
+    "_id" : ObjectId("5cdff3e13b6a623ac450f99c"), 
+    "token" : "3dc5fbf8-8076-4b81-97a6-5210f506fdcd", 
+    "user" : {
+        "_id" : ObjectId("5cdff3e13b6a623ac450f99b"), 
+        "email" : "test@gmail.com", 
+        "username" : "saiupadhyayula1", 
+        "password" : "$2a$12$HoL.JrS2peUuc9EtsUEnoOFijlutklSZbhdfteBeHAnGdmzvt6GtG", 
+        "enabled" : false
+    }, 
+    "_class" : "com.techie.shoppingstore.model.VerificationToken"
+}
+{ 
+    "_id" : ObjectId("5cdff4ec3b6a6224c0afc8ae"), 
+    "token" : "9d33a687-d041-4243-b34d-7491670b9cb8", 
+    "user" : {
+        "_id" : ObjectId("5cdff4ec3b6a6224c0afc8ad"), 
+        "email" : "test@gmail.com", 
+        "username" : "saiupadhyayula2", 
+        "password" : "$2a$12$9xU4q0ZHM/2QrJDg1hS4WONt0D.rBUnqYS0uET.tXkTnGE05QYsEi", 
+        "enabled" : false
+    }, 
+    "_class" : "com.techie.shoppingstore.model.VerificationToken"
+}

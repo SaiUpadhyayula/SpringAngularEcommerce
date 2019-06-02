@@ -40,7 +40,7 @@ public class ProductService {
 
     private ProductDto mapToDto(Product product) {
         ProductAvailability productAvailability = product.getQuantity() > 0 ? inStock() : outOfStock();
-        return new ProductDto(product.getName(), product.getImageUrl(), product.getPrice(), product.getDescription(), product.getManufacturer(), productAvailability, product.getProductAttributeList());
+        return new ProductDto(product.getName(), product.getImageUrl(), product.getSku(), product.getPrice(), product.getDescription(), product.getManufacturer(), productAvailability, product.getProductAttributeList());
     }
 
     private ProductAvailability outOfStock() {
@@ -51,12 +51,11 @@ public class ProductService {
         return new ProductAvailability("Out of Stock", "forestgreen");
     }
 
-    @Cacheable(value = "singleProduct", key = "#productName")
-    public ProductDto readOneProduct(String productName) {
-        log.info("Reading Product with productName - {}", productName);
-        Optional<Product> optionalProduct = productRepository.findByName(productName);
+    @Cacheable(value = "singleProduct", key = "#sku")
+    public ProductDto readOneProduct(String sku) {
+        log.info("Reading Product with productName - {}", sku);
+        Optional<Product> optionalProduct = productRepository.findBySku(sku);
         Product product = optionalProduct.orElseThrow(IllegalArgumentException::new);
-
         return mapToDto(product);
     }
 
