@@ -20,6 +20,5 @@ This project is still in development.
 - Mongo DB
 - Angular
 - Redis for Caching
-- RabbitMQ
 - Elastic Search
 
