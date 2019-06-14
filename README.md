@@ -4,12 +4,12 @@ NgSpringShoppingStore is a shopping cart application developed as a pet project 
 This project is still in development.
 
 #Features
-- User Signup and Login
+- Token Based User Authentication(JWT)
 - Payment Gateway (using Stripe)
 - Wishlist
 - Product Catalog
 - Admin Console
-- Order Managemetn
+- Order Management
 - User Management
 - Product Search
 - PDF Report Generation (Order Acknowledgment)
@@ -20,6 +20,5 @@ This project is still in development.
 - Mongo DB
 - Angular
 - Redis for Caching
-- RabbitMQ
 - Elastic Search
 

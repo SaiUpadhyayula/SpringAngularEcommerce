@@ -115,7 +115,8 @@ public class NgSpringShoppingStoreApplicationTests {
         Category category = categoryRepository.findByName("Mobile Phones").orElseThrow(() -> new IllegalArgumentException("Invalid Category"));
         List<Product> products = productRepository.findByCategory(category);
         category.setPossibleFacets(Arrays.asList("Brand", "4G", "Fingerprint Recognition", "Battery Capacity",
-                "Battery Type", "Glass Type", "Hybrid SIM Slot", "Internal Storage", "Memory(RAM)", "Operating System", "SIM Type", "Primary Camera", "Screen Size (Diagonal)", "Selfie Camera"));
+                "Battery Type", "Glass Type", "Hybrid SIM Slot", "Internal Storage", "Memory(RAM)", "Operating System",
+                "SIM Type", "Primary Camera", "Screen Size (Diagonal)", "Selfie Camera"));
         products.forEach(product -> product.setCategory(category));
         categoryRepository.save(category);
         productRepository.saveAll(products);
