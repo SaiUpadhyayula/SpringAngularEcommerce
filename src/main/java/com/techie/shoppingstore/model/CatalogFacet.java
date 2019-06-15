@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-class CatalogFacet {
+public class CatalogFacet {
     private String facetName;
     private String facetDisplayName;
 }

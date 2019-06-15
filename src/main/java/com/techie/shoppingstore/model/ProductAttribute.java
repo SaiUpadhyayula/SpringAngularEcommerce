@@ -1,15 +1,24 @@
 package com.techie.shoppingstore.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.io.Serializable;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class ProductAttribute implements Serializable {
     private String attributeName;
     private String attributeValue;
+
+    public String getAttributeName() {
+        return attributeName;
+    }
+
+    public void setAttributeName(String attributeName) {
+        this.attributeName = attributeName;
+    }
+
+    public String getAttributeValue() {
+        return attributeValue;
+    }
+
+    public void setAttributeValue(String attributeValue) {
+        this.attributeValue = attributeValue;
+    }
 }

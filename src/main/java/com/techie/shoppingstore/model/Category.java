@@ -18,4 +18,28 @@ public class Category implements Serializable {
     private Long id;
     private String name;
     private List<String> possibleFacets;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public List<String> getPossibleFacets() {
+        return possibleFacets;
+    }
+
+    public void setPossibleFacets(List<String> possibleFacets) {
+        this.possibleFacets = possibleFacets;
+    }
 }

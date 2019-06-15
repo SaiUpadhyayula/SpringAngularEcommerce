@@ -2,7 +2,6 @@ package com.techie.shoppingstore.config;
 
 import com.techie.shoppingstore.exceptions.SpringStoreException;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
@@ -22,15 +21,14 @@ public class ElasticSearchConfig {
     @SuppressWarnings("WeakerAccess")
     @Bean
     public Client client() {
-        Settings elasticsearchSettings = Settings.builder()
-                .put("client.transport.sniff", true).build();
-        TransportClient client = new PreBuiltTransportClient(elasticsearchSettings);
+        System.setProperty("es.set.netty.runtime.available.processors", "false");
         try {
-            client.addTransportAddress(new TransportAddress(InetAddress.getByName("127.0.0.1"), 9300));
+        return new PreBuiltTransportClient(Settings.EMPTY)
+                .addTransportAddress(new TransportAddress(InetAddress.getByName("localhost"), 9300));
+
         } catch (UnknownHostException e) {
             throw new SpringStoreException("An error occured when configuring Elastic Search");
         }
-        return client;
     }
 
     @Bean

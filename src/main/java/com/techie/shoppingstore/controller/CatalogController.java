@@ -6,7 +6,6 @@ import com.techie.shoppingstore.dto.ProductDto;
 import com.techie.shoppingstore.service.CategoryService;
 import com.techie.shoppingstore.service.ProductService;
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StopWatch;
@@ -17,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/store/catalog/")
 @AllArgsConstructor
-@Slf4j
 public class CatalogController {
     private final CategoryService categoryService;
     private final ProductService productService;
@@ -33,8 +31,6 @@ public class CatalogController {
         stopWatch.start();
         List<ProductDto> productDtos = productService.findAll();
         stopWatch.stop();
-
-        log.info("Time taken to load {} products is {}", productDtos.size(), stopWatch.getTotalTimeSeconds());
         return new ResponseEntity<>(productDtos, HttpStatus.OK);
     }
 
@@ -50,10 +46,11 @@ public class CatalogController {
         return new ResponseEntity<>(productDtos, HttpStatus.OK);
     }
 
-//    @GetMapping("possibleFacets/{categoryName}")
-//    public ResponseEntity<FacetsDto> readFacetsByCategory(@PathVariable String categoryName) {
-//
-//    }
+    @GetMapping("possibleFacets/{categoryName}")
+    public ResponseEntity<List<FacetsDto>> readFacetsByCategory(@PathVariable String categoryName) {
+        List<FacetsDto> facets = categoryService.createFacets(categoryName);
+        return new ResponseEntity<>(facets, HttpStatus.OK);
+    }
 
     @PostMapping
     public void saveProduct(@PathVariable ProductDto productDto) {

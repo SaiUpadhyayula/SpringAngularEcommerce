@@ -6,9 +6,18 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class CategoryDto implements Serializable {
     private String categoryNames;
+
+    public CategoryDto(String categoryNames){
+        this.categoryNames = categoryNames;
+    }
+
+    public String getCategoryNames() {
+        return categoryNames;
+    }
+
+    public void setCategoryNames(String categoryNames) {
+        this.categoryNames = categoryNames;
+    }
 }
