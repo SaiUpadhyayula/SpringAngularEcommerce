@@ -11,19 +11,22 @@ import com.techie.shoppingstore.model.ProductAttribute;
 import com.techie.shoppingstore.repository.CategoryRepository;
 import com.techie.shoppingstore.repository.ProductRepository;
 import com.techie.shoppingstore.repository.elasticsearch.ProductSearchRepository;
+import com.techie.shoppingstore.service.ProductMapper;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.data.util.Pair;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.math.BigDecimal;
 import java.util.*;
+
+import static java.util.stream.Collectors.toList;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -38,9 +41,13 @@ public class NgSpringShoppingStoreApplicationTests {
     @Autowired
     private ProductSearchRepository productSearchRepository;
 
+    @Autowired
+    private ProductMapper productMapper;
+
     private static final String URL = "https://www.reliancedigital.in/rildigitalws/v2/rrldigital/cms/pagedata";
 
     @Test
+    @Ignore
     public void scrapeAndStoreData() throws JSONException, UnirestException {
         Map<String, Pair<String, Integer>> categoryMap = new HashMap<>();
         categoryMap.put("Mobile Phones", Pair.of("S101711", 18));
@@ -117,6 +124,7 @@ public class NgSpringShoppingStoreApplicationTests {
     }
 
     @Test
+    @Ignore
     public void category() {
 //        Category category = categoryRepository.findByName("Mobile Phones").orElseThrow(() -> new IllegalArgumentException("Invalid Category"));
 //        List<Product> products = productRepository.findByCategory(category);
@@ -172,6 +180,7 @@ public class NgSpringShoppingStoreApplicationTests {
     }
 
     @Test
+    @Ignore
     public void updateSku() {
         List<Product> products = productRepository.findAll();
         products.forEach(product -> {
@@ -184,6 +193,12 @@ public class NgSpringShoppingStoreApplicationTests {
 
     @Test
     public void saveProductsToES(){
-        List<Product> products = productRepository.findAll();
-    }
+//        List<Product> products = productRepository.findAll();
+//
+//        List<ElasticSearchProduct> esProducts = products
+//                .stream()
+//                .map(product -> productMapper.productToESProduct(product)).collect(toList());
+//
+//        productSearchRepository.saveAll(esProducts);
+        Iterable<ElasticSearchProduct> esProducts = productSearchRepository.findAll();
 }
