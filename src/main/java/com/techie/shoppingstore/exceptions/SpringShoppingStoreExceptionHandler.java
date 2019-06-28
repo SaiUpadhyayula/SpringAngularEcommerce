@@ -15,6 +15,7 @@ public class SpringShoppingStoreExceptionHandler extends ResponseEntityException
         super();
     }
 
+    @Override
     protected final ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException exception, HttpHeaders headers, HttpStatus status, WebRequest request) {
         return handleExceptionInternal(exception, message(HttpStatus.BAD_REQUEST, exception), headers, HttpStatus.BAD_REQUEST, request);
     }
