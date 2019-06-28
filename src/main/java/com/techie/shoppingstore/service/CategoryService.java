@@ -3,30 +3,34 @@ package com.techie.shoppingstore.service;
 import com.techie.shoppingstore.dto.CategoryDto;
 import com.techie.shoppingstore.dto.FacetsDto;
 import com.techie.shoppingstore.model.Category;
-import com.techie.shoppingstore.model.Product;
+import com.techie.shoppingstore.model.ElasticSearchProduct;
 import com.techie.shoppingstore.model.ProductAttribute;
 import com.techie.shoppingstore.repository.CategoryRepository;
-import com.techie.shoppingstore.repository.ProductRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.index.query.Operator;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.SearchQuery;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
+import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 
 @Service
 @Slf4j
+@AllArgsConstructor
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final ProductRepository productRepository;
-
-    public CategoryService(CategoryRepository categoryRepository, ProductRepository productRepository) {
-        this.categoryRepository = categoryRepository;
-        this.productRepository = productRepository;
-    }
+    private final ElasticsearchTemplate elasticsearchTemplate;
 
     @Cacheable(value = "categories")
     public List<CategoryDto> findAll() {
@@ -38,49 +42,36 @@ public class CategoryService {
 
     }
 
-    @Cacheable(value = "facets")
-    public List<FacetsDto> createFacets(String categoryName) {
-        Category category = categoryRepository.findByName(categoryName)
-                .orElseThrow(() -> new IllegalArgumentException("Cannot find Category"));
-        List<Product> products = productRepository.findByCategory(category);
+    @Cacheable(value = "facets/{categoryId}")
+    public List<FacetsDto> readFacets(String categoryId) {
+        Category category = categoryRepository.findById(Long.parseLong(categoryId))
+                .orElseThrow(() -> new IllegalArgumentException("Invalid Category " + categoryId));
 
-        Map<String, Set<String>> map = mapPossibleFacetsForEachCategory(products);
-
-        return createFacetDtos(category.getPossibleFacets(), products, map);
-    }
-
-    private List<FacetsDto> createFacetDtos(List<String> possibleFacets, List<Product> products, Map<String, Set<String>> map) {
-        List<FacetsDto> facetsDtos = new ArrayList<>();
-        for (Product product : products) {
-            List<ProductAttribute> productAttributeList = product.getProductAttributeList();
-            List<ProductAttribute> productAttributesForFacets = productAttributeList.stream()
-                    .filter(productAttribute -> possibleFacets.contains(productAttribute.getAttributeName())).collect(toList());
-
-            facetsDtos = productAttributesForFacets.stream().map(productAttribute -> {
-                FacetsDto facetsDto = new FacetsDto();
-                facetsDto.setFacetName(productAttribute.getAttributeName());
-                facetsDto.setFacetValues(map.get(productAttribute.getAttributeName()));
-                return facetsDto;
-            }).collect(toList());
+        SearchQuery searchQuery = new NativeSearchQueryBuilder()
+                .withQuery(matchQuery("category.name", category.getName().toLowerCase()).operator(Operator.AND))
+                .withPageable(new PageRequest(0, 2000))
+                .build();
+        List<FacetsDto> facetsDtoList = new ArrayList<>();
+        List<ElasticSearchProduct> elasticSearchProducts = elasticsearchTemplate.queryForList(searchQuery, ElasticSearchProduct.class);
+        for (String possibleFacet : category.getPossibleFacets()) {
+            FacetsDto facetsDto = new FacetsDto();
+            Set<String> productAttributes = elasticSearchProducts.stream()
+                    .map(product -> mapAttribute(product, possibleFacet))
+                    .collect(toSet());
+            Set<String> facetValues = productAttributes.stream().filter(attribute -> !attribute.isEmpty()).collect(toSet());
+            facetsDto.setFacetName(possibleFacet);
+            facetsDto.setFacetValues(facetValues);
+            facetsDtoList.add(facetsDto);
         }
-        return facetsDtos;
+        return facetsDtoList;
     }
 
-    private Map<String, Set<String>> mapPossibleFacetsForEachCategory(List<Product> products) {
-        Map<String, Set<String>> map = new HashMap<>();
-        products.forEach(product -> {
-            List<ProductAttribute> productAttributeList = product.getProductAttributeList();
-            productAttributeList.forEach(productAttribute -> {
-                Set<String> facetValues = map.get(productAttribute.getAttributeName());
-                if(facetValues != null && !facetValues.isEmpty()){
-                    facetValues.add(productAttribute.getAttributeValue());
-                } else {
-                    facetValues = new HashSet<>();
-                    facetValues.add(productAttribute.getAttributeValue());
-                }
-                map.put(productAttribute.getAttributeName(), facetValues);
-            });
-        });
-        return map;
+    private String mapAttribute(ElasticSearchProduct product, String facet) {
+        for (ProductAttribute productAttribute : product.getProductAttributeList()) {
+            if (productAttribute.getAttributeName().equals(facet)) {
+                return productAttribute.getAttributeValue();
+            }
+        }
+        return "";
     }
 }

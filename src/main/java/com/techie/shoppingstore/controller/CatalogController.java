@@ -48,7 +48,7 @@ public class CatalogController {
 
     @GetMapping("possibleFacets/{categoryName}")
     public ResponseEntity<List<FacetsDto>> readFacetsByCategory(@PathVariable String categoryName) {
-        List<FacetsDto> facets = categoryService.createFacets(categoryName);
+        List<FacetsDto> facets = categoryService.readFacets(categoryName);
         return new ResponseEntity<>(facets, HttpStatus.OK);
     }
 
