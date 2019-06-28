@@ -2,6 +2,8 @@ package com.techie.shoppingstore.model;
 
 import lombok.Data;
 import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,6 +19,7 @@ public class ElasticSearchProduct{
     private String sku;
     private String imageUrl;
     private Category category;
+    @Field(type = FieldType.Nested)
     private List<ProductAttribute> productAttributeList;
     private Integer quantity;
     private String manufacturer;

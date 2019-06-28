@@ -17,6 +17,7 @@ public class Product implements Serializable {
     private String sku;
     private String imageUrl;
     private Category category;
+    private Long categoryId;
     private List<ProductAttribute> productAttributeList;
     private Integer quantity;
     private String manufacturer;

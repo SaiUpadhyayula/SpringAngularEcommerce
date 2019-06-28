@@ -4,6 +4,7 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import com.techie.shoppingstore.exceptions.SpringStoreException;
 import com.techie.shoppingstore.model.Category;
 import com.techie.shoppingstore.model.ElasticSearchProduct;
 import com.techie.shoppingstore.model.Product;
@@ -12,6 +13,7 @@ import com.techie.shoppingstore.repository.CategoryRepository;
 import com.techie.shoppingstore.repository.ProductRepository;
 import com.techie.shoppingstore.repository.elasticsearch.ProductSearchRepository;
 import com.techie.shoppingstore.service.ProductMapper;
+import org.elasticsearch.index.query.Operator;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,13 +22,19 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.SearchQuery;
 import org.springframework.data.util.Pair;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
+import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -40,6 +48,9 @@ public class NgSpringShoppingStoreApplicationTests {
 
     @Autowired
     private ProductSearchRepository productSearchRepository;
+
+    @Autowired
+    private ElasticsearchTemplate elasticsearchTemplate;
 
     @Autowired
     private ProductMapper productMapper;
@@ -126,13 +137,14 @@ public class NgSpringShoppingStoreApplicationTests {
     @Test
     @Ignore
     public void category() {
-//        Category category = categoryRepository.findByName("Mobile Phones").orElseThrow(() -> new IllegalArgumentException("Invalid Category"));
-//        List<Product> products = productRepository.findByCategory(category);
-//        category.setPossibleFacets(Arrays.asList("Brand", "4G", "Fingerprint Recognition", "Battery Capacity",
-//                "Battery Type", "Glass Type", "Hybrid SIM Slot", "Internal Storage", "Memory(RAM)", "Operating System",
-//                "SIM Type", "Primary Camera", "Screen Size (Diagonal)", "Selfie Camera"));
-//        products.forEach(product -> product.setCategory(category));
-//        categoryRepository.save(category);
+        Category category = categoryRepository.findByName("Mobile Phones").orElseThrow(() -> new IllegalArgumentException("Invalid Category"));
+        List<Product> products = productRepository.findByCategory(category);
+        category.setPossibleFacets(Arrays.asList("Brand", "4G", "Fingerprint Recognition", "Battery Capacity",
+                "Battery Type", "Glass Type", "Hybrid SIM Slot", "Internal Storage", "Memory(RAM)", "Operating System",
+                "SIM Type", "Primary Camera", "Screen Size (Diagonal)", "Selfie Camera"));
+        products.forEach(product -> product.setCategory(category));
+        categoryRepository.save(category);
+        productRepository.saveAll(products);
 
         Category tablets = categoryRepository.findByName("Tablets").orElseThrow(() -> new IllegalArgumentException("Invalid Category"));
         List<Product> tabletProducts = productRepository.findByCategory(tablets);
@@ -192,7 +204,7 @@ public class NgSpringShoppingStoreApplicationTests {
     }
 
     @Test
-    public void saveProductsToES(){
+    public void saveProductsToES() {
 //        List<Product> products = productRepository.findAll();
 //
 //        List<ElasticSearchProduct> esProducts = products
@@ -200,5 +212,34 @@ public class NgSpringShoppingStoreApplicationTests {
 //                .map(product -> productMapper.productToESProduct(product)).collect(toList());
 //
 //        productSearchRepository.saveAll(esProducts);
-        Iterable<ElasticSearchProduct> esProducts = productSearchRepository.findAll();
+        Category smartWatches = categoryRepository.findByName("Smart Watches")
+                .orElseThrow(() -> new IllegalArgumentException("Invalid Category"));
+
+        SearchQuery searchQuery = new NativeSearchQueryBuilder()
+                .withQuery(matchQuery("category.name",smartWatches.getName().toLowerCase()).operator(Operator.AND))
+                .withPageable(new PageRequest(0, 2000))
+                .build();
+
+        List<ElasticSearchProduct> elasticSearchProducts = elasticsearchTemplate.queryForList(searchQuery, ElasticSearchProduct.class);
+        Map<String, Set<String>> facetValues = new HashMap<>();
+        Set<String> attributes = new HashSet<>();
+        for (String possibleFacet : smartWatches.getPossibleFacets()) {
+            Set<String> productAttributes = elasticSearchProducts.stream()
+                    .map(product->mapAttribute(product, possibleFacet))
+                    .collect(toSet());
+            attributes.addAll(productAttributes.stream().filter(attribute -> !attribute.isEmpty()).collect(toSet()));
+
+        }
+        facetValues.put(smartWatches.getName(), attributes);
+        System.out.println("Products");
+    }
+
+    private String mapAttribute(ElasticSearchProduct product, String facet) {
+        for (ProductAttribute productAttribute : product.getProductAttributeList()) {
+            if(productAttribute.getAttributeName().equals(facet)){
+                return productAttribute.getAttributeValue();
+            }
+        }
+        return "";
+    }
 }
