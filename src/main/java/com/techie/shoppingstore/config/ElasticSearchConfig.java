@@ -7,8 +7,6 @@ import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 import java.net.InetAddress;
@@ -18,21 +16,15 @@ import java.net.UnknownHostException;
 @EnableElasticsearchRepositories
 public class ElasticSearchConfig {
 
-    @SuppressWarnings("WeakerAccess")
     @Bean
     public Client client() {
         System.setProperty("es.set.netty.runtime.available.processors", "false");
         try {
-        return new PreBuiltTransportClient(Settings.EMPTY)
-                .addTransportAddress(new TransportAddress(InetAddress.getByName("localhost"), 9300));
+            return new PreBuiltTransportClient(Settings.EMPTY)
+                    .addTransportAddress(new TransportAddress(InetAddress.getByName("localhost"), 9300));
 
         } catch (UnknownHostException e) {
             throw new SpringStoreException("An error occured when configuring Elastic Search");
         }
-    }
-
-    @Bean
-    public ElasticsearchOperations elasticsearchTemplate() {
-        return new ElasticsearchTemplate(client());
     }
 }

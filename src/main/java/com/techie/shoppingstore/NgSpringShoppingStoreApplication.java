@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDa
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Import;
 
-@SpringBootApplication(exclude = ElasticsearchDataAutoConfiguration.class)
+@SpringBootApplication
 @EnableCaching
 @Import(AppSecurityConfig.class)
 public class NgSpringShoppingStoreApplication {
