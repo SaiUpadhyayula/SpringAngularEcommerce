@@ -1,0 +1,56 @@
+{
+  "query": {
+    "bool": {
+      "must": {
+        "multi_match": {
+          "query": "laptop",
+          "fields": [
+            "name",
+            "description"
+          ]
+        }
+      },
+      "filter": {
+        "term": {
+          "manufacturer": "Lenovo"
+        }
+      }
+    }
+  },
+  "aggs": {
+    "attributes": {
+      "nested": {
+        "path": "productAttributeList"
+      },
+      "aggs": {
+        "inner": {
+          "filter": {
+            "terms": {
+              "productAttributeList.attributeName.keyword": [
+                "Brand",
+                "4G",
+                "Fingerprint Recognition",
+                "Operating System Type",
+                "Memory (RAM)"
+              ]
+            }
+          },
+          "aggs": {
+            "key": {
+              "terms": {
+                "field": "productAttributeList.attributeName.keyword"
+              },
+              "aggs": {
+                "value": {
+                  "terms": {
+                    "field": "productAttributeList.attributeValue.keyword"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
