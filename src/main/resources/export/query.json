@@ -9,41 +9,100 @@
             "description"
           ]
         }
-      },
-      "filter": {
-        "term": {
-          "manufacturer": "Lenovo"
-        }
       }
     }
   },
   "aggs": {
-    "attributes": {
-      "nested": {
-        "path": "productAttributeList"
+    "agg_all_facets_filtered": {
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "nested": {
+                "path": "productAttributeList",
+                "query": {
+                  "bool": {
+                    "filter": [
+                      {
+                        "term": {
+                          "productAttributeList.attributeName.keyword": "Brand"
+                        }
+                      },
+                      {
+                        "terms": {
+                          "productAttributeList.attributeValue.keyword": [
+                            "Lenovo"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "nested": {
+                "path": "productAttributeList",
+                "query": {
+                  "bool": {
+                    "filter": [
+                      {
+                        "term": {
+                          "productAttributeList.attributeName.keyword": "Hard Drive"
+                        }
+                      },
+                      {
+                        "terms": {
+                          "productAttributeList.attributeValue.keyword": [
+                            "512 GB"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
       },
       "aggs": {
-        "inner": {
-          "filter": {
-            "terms": {
-              "productAttributeList.attributeName.keyword": [
-                "Brand",
-                "4G",
-                "Fingerprint Recognition",
-                "Operating System Type",
-                "Memory (RAM)"
-              ]
-            }
+        "agg_all_facets_filtered": {
+          "nested": {
+            "path": "productAttributeList"
           },
           "aggs": {
-            "key": {
-              "terms": {
-                "field": "productAttributeList.attributeName.keyword"
+            "inner": {
+              "filter": {
+                "terms": {
+                  "productAttributeList.attributeName.keyword": [
+                    "Brand",
+                    "Battery Type",
+                    "Display Type",
+                    "Graphics Card - Brand",
+                    "Graphics Card - Sub-Brand",
+                    "Hard Drive",
+                    "HDMI",
+                    "Memory (RAM)",
+                    "Hard Drive Type",
+                    "Operating System Type",
+                    "Processor Brand",
+                    "Core Type",
+                    "Touch Screen"
+                  ]
+                }
               },
               "aggs": {
-                "value": {
+                "key": {
                   "terms": {
-                    "field": "productAttributeList.attributeValue.keyword"
+                    "field": "productAttributeList.attributeName.keyword"
+                  },
+                  "aggs": {
+                    "value": {
+                      "terms": {
+                        "field": "productAttributeList.attributeValue.keyword"
+                      }
+                    }
                   }
                 }
               }
@@ -51,6 +110,58 @@
           }
         }
       }
+    }
+  },
+  "post_filter": {
+    "bool": {
+      "must": [
+        {
+          "nested": {
+            "path": "productAttributeList",
+            "query": {
+              "bool": {
+                "filter": [
+                  {
+                    "term": {
+                      "productAttributeList.attributeName.keyword": "Brand"
+                    }
+                  },
+                  {
+                    "terms": {
+                      "productAttributeList.attributeValue.keyword": [
+                        "Lenovo"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "nested": {
+            "path": "productAttributeList",
+            "query": {
+              "bool": {
+                "filter": [
+                  {
+                    "term": {
+                      "productAttributeList.attributeName.keyword": "Hard Drive"
+                    }
+                  },
+                  {
+                    "terms": {
+                      "productAttributeList.attributeValue.keyword": [
+                        "512 GB"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
