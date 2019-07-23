@@ -1,11 +1,13 @@
 package com.techie.shoppingstore.controller;
 
 import com.techie.shoppingstore.dto.CategoryDto;
-import com.techie.shoppingstore.dto.FacetsDto;
 import com.techie.shoppingstore.dto.ProductDto;
+import com.techie.shoppingstore.dto.SearchQueryDto;
 import com.techie.shoppingstore.service.CategoryService;
 import com.techie.shoppingstore.service.ProductService;
+import com.techie.shoppingstore.service.SearchService;
 import lombok.AllArgsConstructor;
+import org.elasticsearch.client.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StopWatch;
@@ -19,6 +21,7 @@ import java.util.List;
 public class CatalogController {
     private final CategoryService categoryService;
     private final ProductService productService;
+    private final SearchService searchService;
 
     @GetMapping("categories")
     public ResponseEntity<List<CategoryDto>> readAllCategories() {
@@ -46,10 +49,10 @@ public class CatalogController {
         return new ResponseEntity<>(productDtos, HttpStatus.OK);
     }
 
-    @GetMapping("possibleFacets/{categoryName}")
-    public ResponseEntity<List<FacetsDto>> readFacetsByCategory(@PathVariable String categoryName) {
-        List<FacetsDto> facets = categoryService.readFacets(categoryName);
-        return new ResponseEntity<>(facets, HttpStatus.OK);
+    @GetMapping("{categoryName}/facets/filter")
+    public ResponseEntity<Response> filterForFacets(@PathVariable String categoryName, @RequestBody SearchQueryDto searchQueryDto) {
+        searchService.searchWithFilters(searchQueryDto);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping
