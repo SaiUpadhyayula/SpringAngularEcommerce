@@ -2,7 +2,6 @@ package com.techie.shoppingstore.controller;
 
 import com.techie.shoppingstore.dto.CategoryDto;
 import com.techie.shoppingstore.dto.ProductDto;
-import com.techie.shoppingstore.dto.SearchQueryDto;
 import com.techie.shoppingstore.service.CategoryService;
 import com.techie.shoppingstore.service.ProductService;
 import com.techie.shoppingstore.service.SearchService;
@@ -13,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StopWatch;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -49,10 +49,9 @@ public class CatalogController {
         return new ResponseEntity<>(productDtos, HttpStatus.OK);
     }
 
-    @GetMapping("{categoryName}/facets/filter")
-    public ResponseEntity<Response> filterForFacets(@PathVariable String categoryName, @RequestBody SearchQueryDto searchQueryDto) {
-        searchService.searchWithFilters(searchQueryDto);
-        return new ResponseEntity<>(HttpStatus.OK);
+    @PostMapping("{categoryName}/facets/filter")
+    public Response filterForFacets() throws IOException {
+        return searchService.searchWithFilters();
     }
 
     @PostMapping
