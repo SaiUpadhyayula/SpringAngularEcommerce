@@ -1,5 +1,10 @@
 package com.techie.shoppingstore.service;
 
+import com.techie.shoppingstore.dto.SearchQueryDto;
+import com.techie.shoppingstore.dto.SearchQueryDto.Filter;
+import com.techie.shoppingstore.exceptions.SpringStoreException;
+import com.techie.shoppingstore.model.Category;
+import com.techie.shoppingstore.repository.CategoryRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.HttpPost;
@@ -10,9 +15,7 @@ import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
-import org.elasticsearch.client.ResponseListener;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.common.SuppressForbidden;
 import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -26,14 +29,14 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.max.MaxAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.min.MinAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
 
@@ -45,70 +48,94 @@ public class SearchService {
     private static final String INDEX = "product";
 
     private final RestHighLevelClient client;
+    private final CategoryRepository categoryRepository;
 
-    public Response searchWithFilters() throws IOException {
-        BoolQueryBuilder queryBuilder = boolQuery();
-        queryBuilder.must(Objects.requireNonNull(createFullTextSearchQuery()));
+    public Response searchWithFilters(SearchQueryDto searchQueryDto, String categoryName) throws IOException {
+        Category category = categoryRepository.findByName(categoryName)
+                .orElseThrow(() -> new SpringStoreException("Category - " + categoryName + " Not Found"));
 
-        BoolQueryBuilder queryBuilderForFilter = boolQuery();
-        queryBuilderForFilter.must(QueryBuilders.nestedQuery("productAttributeList",
-                boolQuery().must(termQuery("productAttributeList.attributeName.keyword", "Brand"))
-                        .must(termQuery("productAttributeList.attributeValue.keyword", "Lenovo")), ScoreMode.None));
+        BoolQueryBuilder fullTextQueryBuilder = performFullTextSearch(searchQueryDto, categoryName);
+        FilterAggregationBuilder agg_all_facets_result_filtered = createAggregations(searchQueryDto, category);
+        BoolQueryBuilder postFilterQuery = createPostFilterQuery(searchQueryDto);
 
+        return performSearch(fullTextQueryBuilder, postFilterQuery, agg_all_facets_result_filtered);
+    }
+
+    private FilterAggregationBuilder createAggregations(SearchQueryDto searchQueryDto, Category category) {
         TermsAggregationBuilder by_attribute_value = AggregationBuilders.terms("by_attribute_value")
                 .field("productAttributeList.attributeValue.keyword");
         TermsAggregationBuilder by_attribute_name = AggregationBuilders.terms("by_attribute_name")
                 .field("productAttributeList.attributeName.keyword")
                 .subAggregation(by_attribute_value);
 
+        MinAggregationBuilder minPriceAgg = AggregationBuilders.min("min_price").field("price");
+        MaxAggregationBuilder maxPriceAgg = AggregationBuilders.max("max_price").field("price");
 
-        TermsQueryBuilder filterForAggregations = termsQuery("productAttributeList.attributeName.keyword", Arrays.asList("Brand", "Battery Type"));
+
+        TermsQueryBuilder filterForAggregations = termsQuery("productAttributeList.attributeName.keyword", category.getPossibleFacets());
         FilterAggregationBuilder filtered_aggregation = AggregationBuilders.filter("filtered_aggregation", filterForAggregations).subAggregation(by_attribute_name);
 
         NestedAggregationBuilder agg_all_facets_filtered = AggregationBuilders.nested("agg_all_facets_filtered", "productAttributeList").subAggregation(filtered_aggregation);
 
-        BoolQueryBuilder must = boolQuery().must(termQuery("productAttributeList.attributeName.keyword", "Brand"))
-                .must(termQuery("productAttributeList.attributeValue.keyword", "Lenovo"));
+        BoolQueryBuilder productAttributeList = boolQuery();
+        for (Filter filter : searchQueryDto.getFilters()) {
+            productAttributeList.must(nestedQuery("productAttributeList",
+                    boolQuery()
+                            .must(termQuery("productAttributeList.attributeName.keyword", filter.getKey()))
+                            .must(termQuery("productAttributeList.attributeValue.keyword", filter.getValue())),
+                    ScoreMode.None));
+        }
 
-        BoolQueryBuilder productAttributeList = boolQuery().must(nestedQuery("productAttributeList", must, ScoreMode.None));
-        FilterAggregationBuilder agg_all_facets_result_filtered = AggregationBuilders.filter("agg_all_facets_result_filtered", productAttributeList)
-                .subAggregation(agg_all_facets_filtered);
-
-
-        BoolQueryBuilder postFilterQuery = QueryBuilders.boolQuery();
-
-        BoolQueryBuilder queryBuilderForPostFilter = boolQuery();
-        queryBuilderForPostFilter.must(termQuery("productAttributeList.attributeName.keyword", "Hard Drive"))
-                .must(termQuery("productAttributeList.attributeValue.keyword", "512 GB"));
-        queryBuilderForFilter.must(QueryBuilders.nestedQuery("productAttributeList", queryBuilderForPostFilter, ScoreMode.None));
-
-        postFilterQuery.filter(queryBuilderForFilter);
-
-        return asyncSearch(queryBuilder, postFilterQuery, agg_all_facets_result_filtered);
+        return AggregationBuilders.filter("agg_all_facets_result_filtered", productAttributeList)
+                .subAggregation(agg_all_facets_filtered).subAggregation(minPriceAgg).subAggregation(maxPriceAgg);
     }
 
-    private QueryBuilder createFullTextSearchQuery() {
+    private BoolQueryBuilder createPostFilterQuery(SearchQueryDto searchQueryDto) {
+        BoolQueryBuilder postFilterQuery = QueryBuilders.boolQuery();
+        BoolQueryBuilder queryBuilderForFilter = boolQuery();
+        for (Filter filter : searchQueryDto.getFilters()) {
+            queryBuilderForFilter.must(QueryBuilders.nestedQuery("productAttributeList",
+                    boolQuery()
+                            .must(termQuery("productAttributeList.attributeName.keyword", filter.getKey()))
+                            .must(termQuery("productAttributeList.attributeValue.keyword", filter.getValue())),
+                    ScoreMode.None));
+        }
+        postFilterQuery.filter(queryBuilderForFilter);
+        return postFilterQuery;
+    }
+
+    private BoolQueryBuilder performFullTextSearch(SearchQueryDto searchQueryDto, String categoryName) {
         BoolQueryBuilder queryBuilder = boolQuery();
-        queryBuilder.must(QueryBuilders.multiMatchQuery("laptop", "name", "description")
-                .minimumShouldMatch("66%")
-                .fuzziness(Fuzziness.AUTO));
+        queryBuilder.must(Objects.requireNonNull(createFullTextSearchQuery(searchQueryDto.getTextQuery(), categoryName)));
         return queryBuilder;
     }
 
-    private Response asyncSearch(QueryBuilder queryBuilder, QueryBuilder postFilterQuery, AggregationBuilder... aggs) throws IOException {
+    private QueryBuilder createFullTextSearchQuery(String textQuery, String categoryName) {
+        BoolQueryBuilder queryBuilder = boolQuery();
+        if (textQuery == null) {
+            queryBuilder.must(QueryBuilders.multiMatchQuery(categoryName, "category.name")
+                    .minimumShouldMatch("66%")
+                    .fuzziness(Fuzziness.AUTO));
+        } else {
+            queryBuilder.must(QueryBuilders.multiMatchQuery(textQuery, "name", "description")
+                    .minimumShouldMatch("66%")
+                    .fuzziness(Fuzziness.AUTO));
+        }
+        return queryBuilder;
+    }
+
+    private Response performSearch(QueryBuilder queryBuilder, QueryBuilder postFilterQuery, AggregationBuilder... aggs) throws IOException {
         SearchRequest request = search(queryBuilder, postFilterQuery, aggs);
         Request lowLevelRequest = new Request(HttpPost.METHOD_NAME, INDEX + "/_search");
         BytesRef source = XContentHelper.toXContent(request.source(), XContentType.JSON, ToXContent.EMPTY_PARAMS, true).toBytesRef();
         log.info("QUERY {}", source.utf8ToString());
-        lowLevelRequest.setEntity(new NByteArrayEntity(source.bytes, source.offset, source.length, createContentType(XContentType.JSON)));
+        lowLevelRequest.setEntity(new NByteArrayEntity(source.bytes, source.offset, source.length, createContentType()));
 
         return client.getLowLevelClient().performRequest(lowLevelRequest);
     }
 
-    // copied from RequestConverts.java, as it is private
-    @SuppressForbidden(reason = "Only allowed place to convert a XContentType to a ContentType")
-    private static ContentType createContentType(final XContentType xContentType) {
-        return ContentType.create(xContentType.mediaTypeWithoutParameters(), (Charset) null);
+    private static ContentType createContentType() {
+        return ContentType.create(XContentType.JSON.mediaTypeWithoutParameters(), (Charset) null);
     }
 
     private SearchRequest search(QueryBuilder queryBuilder, QueryBuilder postFilterQuery, AggregationBuilder... aggs) {
@@ -126,18 +153,4 @@ public class SearchService {
         return request;
     }
 
-    private ResponseListener newResponseListener(final CompletableFuture<Response> future) {
-        return new ResponseListener() {
-
-            @Override
-            public void onSuccess(Response response) {
-                future.complete(response);
-            }
-
-            @Override
-            public void onFailure(Exception exception) {
-                future.completeExceptionally(exception);
-            }
-        };
-    }
 }

@@ -16,6 +16,5 @@ public class SearchQueryDto {
         private String value;
         private String from;
         private String to;
-        private String type;
     }
 }
