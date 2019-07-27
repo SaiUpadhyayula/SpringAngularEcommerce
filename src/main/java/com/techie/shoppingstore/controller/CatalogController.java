@@ -2,12 +2,12 @@ package com.techie.shoppingstore.controller;
 
 import com.techie.shoppingstore.dto.CategoryDto;
 import com.techie.shoppingstore.dto.ProductDto;
+import com.techie.shoppingstore.dto.ProductSearchResponseDto;
 import com.techie.shoppingstore.dto.SearchQueryDto;
 import com.techie.shoppingstore.service.CategoryService;
 import com.techie.shoppingstore.service.ProductService;
 import com.techie.shoppingstore.service.SearchService;
 import lombok.AllArgsConstructor;
-import org.elasticsearch.client.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StopWatch;
@@ -51,7 +51,7 @@ public class CatalogController {
     }
 
     @PostMapping("{categoryName}/facets/filter")
-    public Response filterForFacets(@RequestBody SearchQueryDto searchQueryDto, @PathVariable String categoryName) throws IOException {
+    public ProductSearchResponseDto filterForFacets(@RequestBody SearchQueryDto searchQueryDto, @PathVariable String categoryName) throws IOException {
         return searchService.searchWithFilters(searchQueryDto, categoryName);
     }
 

@@ -1,10 +1,13 @@
 package com.techie.shoppingstore.service;
 
-import com.techie.shoppingstore.dto.SearchQueryDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techie.shoppingstore.dto.*;
 import com.techie.shoppingstore.dto.SearchQueryDto.Filter;
 import com.techie.shoppingstore.exceptions.SpringStoreException;
 import com.techie.shoppingstore.model.Category;
+import com.techie.shoppingstore.model.ElasticSearchProduct;
 import com.techie.shoppingstore.repository.CategoryRepository;
+import io.micrometer.core.instrument.util.StringUtils;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.HttpPost;
@@ -13,8 +16,8 @@ import org.apache.http.nio.entity.NByteArrayEntity;
 import org.apache.lucene.search.join.ScoreMode;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Request;
-import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.ToXContent;
@@ -24,20 +27,34 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermsQueryBuilder;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.filter.ParsedFilter;
 import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.nested.ParsedNested;
+import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.max.MaxAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.max.ParsedMax;
 import org.elasticsearch.search.aggregations.metrics.min.MinAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.min.ParsedMin;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.Charset;
-import java.util.Objects;
+import java.util.*;
 
+import static java.lang.Math.toIntExact;
+import static java.math.BigDecimal.valueOf;
+import static java.util.stream.Collectors.toList;
+import static org.elasticsearch.client.RequestOptions.DEFAULT;
 import static org.elasticsearch.index.query.QueryBuilders.*;
 
 @Service
@@ -49,8 +66,10 @@ public class SearchService {
 
     private final RestHighLevelClient client;
     private final CategoryRepository categoryRepository;
+    private final ObjectMapper objectMapper;
+    private final ProductMapper productMapper;
 
-    public Response searchWithFilters(SearchQueryDto searchQueryDto, String categoryName) throws IOException {
+    public ProductSearchResponseDto searchWithFilters(SearchQueryDto searchQueryDto, String categoryName) throws IOException {
         Category category = categoryRepository.findByName(categoryName)
                 .orElseThrow(() -> new SpringStoreException("Category - " + categoryName + " Not Found"));
 
@@ -58,7 +77,48 @@ public class SearchService {
         FilterAggregationBuilder agg_all_facets_result_filtered = createAggregations(searchQueryDto, category);
         BoolQueryBuilder postFilterQuery = createPostFilterQuery(searchQueryDto);
 
-        return performSearch(fullTextQueryBuilder, postFilterQuery, agg_all_facets_result_filtered);
+        SearchResponse searchResponse = performSearch(fullTextQueryBuilder, postFilterQuery, agg_all_facets_result_filtered);
+        return mapResponse(searchResponse);
+    }
+
+    private ProductSearchResponseDto mapResponse(SearchResponse searchResponse) {
+        List<ProductDto> productDtos = extractProductHits(searchResponse);
+
+        Aggregation aggregations = searchResponse.getAggregations().get("agg_all_facets_result_filtered");
+        Map<String, Aggregation> stringAggregationMap = ((ParsedFilter) aggregations).getAggregations().asMap();
+        BigDecimal minPrice = valueOf(((ParsedMin) stringAggregationMap.get("min_price")).getValue());
+        BigDecimal maxPrice = valueOf(((ParsedMax) stringAggregationMap.get("max_price")).getValue());
+        Aggregation agg_all_facets_filtered = stringAggregationMap.get("agg_all_facets_filtered");
+        Aggregation filtered_aggregation = ((ParsedNested) agg_all_facets_filtered).getAggregations().get("filtered_aggregation");
+        Aggregations aggregations1 = ((ParsedFilter) filtered_aggregation).getAggregations();
+        ParsedStringTerms by_attribute_name = (ParsedStringTerms) aggregations1.getAsMap().get("by_attribute_name");
+        List<? extends Terms.Bucket> buckets = by_attribute_name.getBuckets();
+        List<FacetDto> facetDtos = new ArrayList<>();
+        for (Terms.Bucket bucket : buckets) {
+            FacetDto facetDto = new FacetDto();
+            facetDto.setFacetName(bucket.getKeyAsString());
+            List<FacetValueDto> facetValueDtos = new ArrayList<>();
+            ParsedStringTerms by_attribute_value = bucket.getAggregations().get("by_attribute_value");
+            for (Terms.Bucket attrValueBucket : by_attribute_value.getBuckets()) {
+                FacetValueDto facetValueDto = new FacetValueDto();
+                facetValueDto.setFacetValueName(attrValueBucket.getKeyAsString());
+                facetValueDto.setCount(toIntExact(attrValueBucket.getDocCount()));
+                facetValueDtos.add(facetValueDto);
+            }
+            facetDto.setFacetValueDto(facetValueDtos);
+            facetDtos.add(facetDto);
+        }
+
+        return new ProductSearchResponseDto(productDtos, minPrice, maxPrice, facetDtos);
+    }
+
+    private List<ProductDto> extractProductHits(SearchResponse searchResponse) {
+        SearchHit[] hits = searchResponse.getHits().getHits();
+        List<ElasticSearchProduct> products = new ArrayList<>();
+        Arrays.stream(hits)
+                .forEach(hit -> products.add(objectMapper.convertValue(hit.getSourceAsMap(),
+                        ElasticSearchProduct.class)));
+        return products.stream().map(productMapper::mapESProductToDTO).collect(toList());
     }
 
     private FilterAggregationBuilder createAggregations(SearchQueryDto searchQueryDto, Category category) {
@@ -112,7 +172,7 @@ public class SearchService {
 
     private QueryBuilder createFullTextSearchQuery(String textQuery, String categoryName) {
         BoolQueryBuilder queryBuilder = boolQuery();
-        if (textQuery == null) {
+        if (StringUtils.isBlank(textQuery)) {
             queryBuilder.must(QueryBuilders.multiMatchQuery(categoryName, "category.name")
                     .minimumShouldMatch("66%")
                     .fuzziness(Fuzziness.AUTO));
@@ -124,14 +184,14 @@ public class SearchService {
         return queryBuilder;
     }
 
-    private Response performSearch(QueryBuilder queryBuilder, QueryBuilder postFilterQuery, AggregationBuilder... aggs) throws IOException {
+    private SearchResponse performSearch(QueryBuilder queryBuilder, QueryBuilder postFilterQuery, AggregationBuilder... aggs) throws IOException {
         SearchRequest request = search(queryBuilder, postFilterQuery, aggs);
         Request lowLevelRequest = new Request(HttpPost.METHOD_NAME, INDEX + "/_search");
         BytesRef source = XContentHelper.toXContent(request.source(), XContentType.JSON, ToXContent.EMPTY_PARAMS, true).toBytesRef();
         log.info("QUERY {}", source.utf8ToString());
         lowLevelRequest.setEntity(new NByteArrayEntity(source.bytes, source.offset, source.length, createContentType()));
 
-        return client.getLowLevelClient().performRequest(lowLevelRequest);
+        return client.search(request, DEFAULT);
     }
 
     private static ContentType createContentType() {
