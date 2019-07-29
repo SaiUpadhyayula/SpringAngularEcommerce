@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/store/catalog/")
@@ -34,6 +35,15 @@ public class CatalogController {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
         List<ProductDto> productDtos = productService.findAll();
+        stopWatch.stop();
+        return new ResponseEntity<>(productDtos, HttpStatus.OK);
+    }
+
+    @GetMapping("products/featured")
+    public ResponseEntity<List<ProductDto>> readFeaturedProducts() {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        List<ProductDto> productDtos = productService.findAll().stream().filter(ProductDto::isFeatured).collect(Collectors.toList());
         stopWatch.stop();
         return new ResponseEntity<>(productDtos, HttpStatus.OK);
     }

@@ -9,6 +9,7 @@ import com.techie.shoppingstore.model.User;
 import com.techie.shoppingstore.model.VerificationToken;
 import com.techie.shoppingstore.repository.UserRepository;
 import com.techie.shoppingstore.repository.VerificationTokenRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class AuthService {
 
     @Autowired
@@ -53,12 +55,14 @@ public class AuthService {
                 encodedPassword);
         user.setEnabled(false);
         userRepository.save(user);
+        log.info("Saved User to Database, sending activation email");
 
         String token = generateVerificationToken(user);
         String message = mailContentBuilder.build("Thank you for signing up to Spring Store, please click on the below url to activate your account : "
                 + accountVerificationUrl + "/" + token);
 
         mailService.sendMail(user.getEmail(), message);
+        log.info("Activation email sent!!");
     }
 
     private String generateVerificationToken(User user) {

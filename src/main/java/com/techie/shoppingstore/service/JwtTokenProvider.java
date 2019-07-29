@@ -1,32 +1,43 @@
 package com.techie.shoppingstore.service;
 
+import com.techie.shoppingstore.exceptions.SpringStoreException;
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.security.Key;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.*;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.util.Date;
 
-@Component
+@Service
 @Slf4j
 public class JwtTokenProvider {
 
-    private Key key;
-    @Value("${jwt.secretKey}")
-    private String jwtSecretKey;
-
+    private static final String AUTH_STORE = "ecommerce-auth-store";
+    @Value("${keystore.password}")
+    private String keyStorePassword;
     @Value("${jwt.expirationTimeMs}")
     private int jwtExpirationTimeInMillis;
+    private KeyStore keyStore;
 
     @PostConstruct
-    public void init() {
-        this.key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+    public void loadKeyStore() {
+        try {
+            keyStore = KeyStore.getInstance("JKS");
+            InputStream resourceAsStream = getClass().getResourceAsStream("/auth.jks");
+            keyStore.load(resourceAsStream, keyStorePassword.toCharArray());
+        } catch (KeyStoreException | CertificateException | NoSuchAlgorithmException | IOException e) {
+            throw new SpringStoreException("Exception occured while loading keystore");
+        }
+
     }
 
     String generateToken(Authentication authentication) {
@@ -39,13 +50,30 @@ public class JwtTokenProvider {
                 .setSubject(principal.getUsername())
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
-                .signWith(key)
+                .signWith(getPrivateKey())
                 .compact();
+    }
+
+    private PrivateKey getPrivateKey() {
+        try {
+            return (PrivateKey) keyStore.getKey(AUTH_STORE, keyStorePassword.toCharArray());
+        } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
+            throw new SpringStoreException("Exception occured while retrieving public key from keystore");
+        }
+    }
+
+    private PublicKey getPublicKey() {
+        try {
+            Certificate certificate = keyStore.getCertificate(AUTH_STORE);
+            return certificate.getPublicKey();
+        } catch (KeyStoreException e) {
+            throw new SpringStoreException("Exception occured while retrieving public key from keystore");
+        }
     }
 
     String getUsernameFromJWT(String token) {
         Claims claims = Jwts.parser()
-                .setSigningKey(key)
+                .setSigningKey(getPublicKey())
                 .parseClaimsJws(token)
                 .getBody();
 
@@ -54,7 +82,7 @@ public class JwtTokenProvider {
 
     boolean validateToken(String authToken) {
         try {
-            Jwts.parser().setSigningKey(key).parseClaimsJws(authToken);
+            Jwts.parser().setSigningKey(getPublicKey()).parseClaimsJws(authToken);
             return true;
         } catch (SignatureException ex) {
             log.error("Invalid JWT signature", ex);
