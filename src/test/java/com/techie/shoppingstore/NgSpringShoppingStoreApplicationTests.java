@@ -31,6 +31,7 @@ import static java.util.stream.Collectors.toList;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@Ignore
 public class NgSpringShoppingStoreApplicationTests {
 
     @Autowired
@@ -128,6 +129,7 @@ public class NgSpringShoppingStoreApplicationTests {
     }
 
     @Test
+    @Ignore
     public void category() {
         Category category = categoryRepository.findByName("Mobile Phones").orElseThrow(() -> new IllegalArgumentException("Invalid Category"));
         List<ElasticSearchProduct> products = productSearchRepository.findByCategory(category);
@@ -196,6 +198,7 @@ public class NgSpringShoppingStoreApplicationTests {
     }
 
     @Test
+    @Ignore
     public void saveProductsToES() {
         List<Product> products = productRepository.findAll();
 
@@ -206,6 +209,28 @@ public class NgSpringShoppingStoreApplicationTests {
         productSearchRepository.saveAll(esProducts);
 
         System.out.println("Products");
+    }
+
+    @Test
+    @Ignore
+    public void setFeaturedProduct() {
+        List<Product> all = productRepository.findAll();
+        all.forEach(product -> product.setFeatured(false));
+        List<ElasticSearchProduct> collect = all.stream().map(product -> productMapper.productToESProduct(product)).collect(toList());
+        productRepository.saveAll(all);
+        productSearchRepository.saveAll(collect);
+        List<Product> featured = new ArrayList<>();
+        for (int i = 0; i < all.size(); i++) {
+            if (i % 60 == 0) {
+                Product product = all.get(i);
+                product.setFeatured(true);
+                featured.add(product);
+            }
+        }
+        productRepository.saveAll(featured);
+
+        List<ElasticSearchProduct> collect1 = featured.stream().map(product -> productMapper.productToESProduct(product)).collect(toList());
+        productSearchRepository.saveAll(collect1);
     }
 
     private String mapAttribute(ElasticSearchProduct product, String facet) {
