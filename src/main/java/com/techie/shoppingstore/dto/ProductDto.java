@@ -13,6 +13,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductDto implements Serializable {
+    private static final long serialVersionUID = 6529685098267757690L;
+
     private String productName;
     private String imageUrl;
     private String sku;
@@ -21,4 +23,5 @@ public class ProductDto implements Serializable {
     private String manufacturer;
     private ProductAvailability availability;
     private List<ProductAttribute> attributeList;
+    private boolean featured;
 }

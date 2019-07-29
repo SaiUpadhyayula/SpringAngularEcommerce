@@ -40,7 +40,7 @@ public class ProductService {
 
     private ProductDto mapToDto(Product product) {
         ProductAvailability productAvailability = product.getQuantity() > 0 ? inStock() : outOfStock();
-        return new ProductDto(product.getName(), product.getImageUrl(), product.getSku(), product.getPrice(), product.getDescription(), product.getManufacturer(), productAvailability, product.getProductAttributeList());
+        return new ProductDto(product.getName(), product.getImageUrl(), product.getSku(), product.getPrice(), product.getDescription(), product.getManufacturer(), productAvailability, product.getProductAttributeList(), product.isFeatured());
     }
 
     private ProductAvailability outOfStock() {
