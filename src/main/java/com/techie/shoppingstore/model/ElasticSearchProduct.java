@@ -1,9 +1,11 @@
 package com.techie.shoppingstore.model;
 
 import lombok.Data;
+import org.springframework.data.elasticsearch.annotations.CompletionField;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.core.completion.Completion;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -11,7 +13,7 @@ import java.util.List;
 // Document used to store products in ElasticSearch
 @Document(indexName = "product")
 @Data
-public class ElasticSearchProduct{
+public class ElasticSearchProduct {
     private String id;
     private String name;
     private String description;
@@ -24,4 +26,6 @@ public class ElasticSearchProduct{
     private Integer quantity;
     private String manufacturer;
     private boolean featured;
+    @CompletionField(maxInputLength = 100)
+    private Completion suggestions;
 }

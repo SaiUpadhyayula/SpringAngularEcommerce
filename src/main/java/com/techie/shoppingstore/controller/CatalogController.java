@@ -65,6 +65,11 @@ public class CatalogController {
         return searchService.searchWithFilters(searchQueryDto, categoryName);
     }
 
+    @PostMapping("/search")
+    public ProductSearchResponseDto search(@RequestBody SearchQueryDto searchQueryDto) throws IOException {
+        return searchService.search(searchQueryDto);
+    }
+
     @PostMapping
     public void saveProduct(@PathVariable ProductDto productDto) {
         productService.save(productDto);

@@ -37,7 +37,7 @@ import org.elasticsearch.search.aggregations.bucket.filter.ParsedFilter;
 import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.nested.ParsedNested;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.max.MaxAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.max.ParsedMax;
@@ -53,6 +53,7 @@ import java.util.*;
 
 import static java.lang.Math.toIntExact;
 import static java.math.BigDecimal.valueOf;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.elasticsearch.client.RequestOptions.DEFAULT;
 import static org.elasticsearch.index.query.QueryBuilders.*;
@@ -63,6 +64,23 @@ import static org.elasticsearch.index.query.QueryBuilders.*;
 public class SearchService {
 
     private static final String INDEX = "product";
+    private static final String AGG_ALL_FACETS_RESULT_FILTERED = "agg_all_facets_result_filtered";
+    private static final String BY_CATEGORY = "by_category";
+    private static final String CATEGORY_NAME_KEYWORD = "category.name.keyword";
+    private static final String MIN_PRICE = "min_price";
+    private static final String MAX_PRICE = "max_price";
+    private static final String AGG_ALL_FACETS_FILTERED = "agg_all_facets_filtered";
+    private static final String FILTERED_AGGREGATION = "filtered_aggregation";
+    private static final String BY_ATTRIBUTE_NAME = "by_attribute_name";
+    private static final String BY_ATTRIBUTE_VALUE = "by_attribute_value";
+    private static final String PRODUCT_ATTRIBUTE_LIST_ATTRIBUTE_VALUE_KEYWORD = "productAttributeList.attributeValue.keyword";
+    private static final String PRODUCT_ATTRIBUTE_LIST_ATTRIBUTE_NAME_KEYWORD = "productAttributeList.attributeName.keyword";
+    private static final String PRICE = "price";
+    private static final String PRODUCT_ATTRIBUTE_LIST = "productAttributeList";
+    private static final String CATEGORY_NAME = "category.name";
+    private static final String NAME = "name";
+    private static final String DESCRIPTION = "description";
+    private static final String MINIMUM_SHOULD_MATCH = "66%";
 
     private final RestHighLevelClient client;
     private final CategoryRepository categoryRepository;
@@ -74,32 +92,49 @@ public class SearchService {
                 .orElseThrow(() -> new SpringStoreException("Category - " + categoryName + " Not Found"));
 
         BoolQueryBuilder fullTextQueryBuilder = performFullTextSearch(searchQueryDto, categoryName);
-        FilterAggregationBuilder agg_all_facets_result_filtered = createAggregations(searchQueryDto, category);
+        FilterAggregationBuilder agg_all_facets_result_filtered = createAggregations(searchQueryDto, category.getPossibleFacets());
         BoolQueryBuilder postFilterQuery = createPostFilterQuery(searchQueryDto);
 
         SearchResponse searchResponse = performSearch(fullTextQueryBuilder, postFilterQuery, agg_all_facets_result_filtered);
         return mapResponse(searchResponse);
     }
 
+    public ProductSearchResponseDto search(SearchQueryDto searchQueryDto) throws IOException {
+        BoolQueryBuilder fullTextQueryBuilder = performFullTextSearch(searchQueryDto, null);
+        FilterAggregationBuilder agg_all_facets_result_filtered = createAggregations(searchQueryDto, singletonList("Brand"));
+        TermsAggregationBuilder by_category_value = AggregationBuilders.terms(BY_CATEGORY).field(CATEGORY_NAME_KEYWORD);
+        SearchResponse searchResponse = performSearch(fullTextQueryBuilder, null, agg_all_facets_result_filtered, by_category_value);
+        return mapResponse(searchResponse);
+    }
+
     private ProductSearchResponseDto mapResponse(SearchResponse searchResponse) {
         List<ProductDto> productDtos = extractProductHits(searchResponse);
 
-        Aggregation aggregations = searchResponse.getAggregations().get("agg_all_facets_result_filtered");
+        Aggregation aggregations = searchResponse.getAggregations().get(AGG_ALL_FACETS_RESULT_FILTERED);
         Map<String, Aggregation> stringAggregationMap = ((ParsedFilter) aggregations).getAggregations().asMap();
-        BigDecimal minPrice = valueOf(((ParsedMin) stringAggregationMap.get("min_price")).getValue());
-        BigDecimal maxPrice = valueOf(((ParsedMax) stringAggregationMap.get("max_price")).getValue());
-        Aggregation agg_all_facets_filtered = stringAggregationMap.get("agg_all_facets_filtered");
-        Aggregation filtered_aggregation = ((ParsedNested) agg_all_facets_filtered).getAggregations().get("filtered_aggregation");
+        
+        BigDecimal minPrice = valueOf(((ParsedMin) stringAggregationMap.get(MIN_PRICE)).getValue());
+        BigDecimal maxPrice = valueOf(((ParsedMax) stringAggregationMap.get(MAX_PRICE)).getValue());
+
+        List<FacetDto> facetDtos = extractResponseForFilteredAggregations(stringAggregationMap);
+        extractResponseForCategoryAggregation(searchResponse, facetDtos);
+
+        return new ProductSearchResponseDto(productDtos, minPrice, maxPrice, facetDtos);
+    }
+
+    private List<FacetDto> extractResponseForFilteredAggregations(Map<String, Aggregation> stringAggregationMap) {
+        Aggregation agg_all_facets_filtered = stringAggregationMap.get(AGG_ALL_FACETS_FILTERED);
+        Aggregation filtered_aggregation = ((ParsedNested) agg_all_facets_filtered).getAggregations().get(FILTERED_AGGREGATION);
         Aggregations aggregations1 = ((ParsedFilter) filtered_aggregation).getAggregations();
-        ParsedStringTerms by_attribute_name = (ParsedStringTerms) aggregations1.getAsMap().get("by_attribute_name");
-        List<? extends Terms.Bucket> buckets = by_attribute_name.getBuckets();
+        ParsedStringTerms by_attribute_name = (ParsedStringTerms) aggregations1.getAsMap().get(BY_ATTRIBUTE_NAME);
+        List<? extends Bucket> buckets = by_attribute_name.getBuckets();
         List<FacetDto> facetDtos = new ArrayList<>();
-        for (Terms.Bucket bucket : buckets) {
+        for (Bucket bucket : buckets) {
             FacetDto facetDto = new FacetDto();
             facetDto.setFacetName(bucket.getKeyAsString());
             List<FacetValueDto> facetValueDtos = new ArrayList<>();
-            ParsedStringTerms by_attribute_value = bucket.getAggregations().get("by_attribute_value");
-            for (Terms.Bucket attrValueBucket : by_attribute_value.getBuckets()) {
+            ParsedStringTerms by_attribute_value = bucket.getAggregations().get(BY_ATTRIBUTE_VALUE);
+            for (Bucket attrValueBucket : by_attribute_value.getBuckets()) {
                 FacetValueDto facetValueDto = new FacetValueDto();
                 facetValueDto.setFacetValueName(attrValueBucket.getKeyAsString());
                 facetValueDto.setCount(toIntExact(attrValueBucket.getDocCount()));
@@ -108,8 +143,23 @@ public class SearchService {
             facetDto.setFacetValueDto(facetValueDtos);
             facetDtos.add(facetDto);
         }
+        return facetDtos;
+    }
 
-        return new ProductSearchResponseDto(productDtos, minPrice, maxPrice, facetDtos);
+    private void extractResponseForCategoryAggregation(SearchResponse searchResponse, List<FacetDto> facetDtos) {
+        ParsedStringTerms categoryAggregations = searchResponse.getAggregations().get(BY_CATEGORY);
+        List<? extends Bucket> by_category = categoryAggregations.getBuckets();
+        List<FacetValueDto> facetValueDtos = new ArrayList<>();
+        FacetDto facetDto = new FacetDto();
+        facetDto.setFacetName("Category");
+        for (Bucket bucket : by_category) {
+            FacetValueDto facetValueDto = new FacetValueDto();
+            facetValueDto.setFacetValueName(bucket.getKeyAsString());
+            facetValueDto.setCount(toIntExact(bucket.getDocCount()));
+            facetValueDtos.add(facetValueDto);
+        }
+        facetDto.setFacetValueDto(facetValueDtos);
+        facetDtos.add(facetDto);
     }
 
     private List<ProductDto> extractProductHits(SearchResponse searchResponse) {
@@ -121,32 +171,32 @@ public class SearchService {
         return products.stream().map(productMapper::mapESProductToDTO).collect(toList());
     }
 
-    private FilterAggregationBuilder createAggregations(SearchQueryDto searchQueryDto, Category category) {
-        TermsAggregationBuilder by_attribute_value = AggregationBuilders.terms("by_attribute_value")
-                .field("productAttributeList.attributeValue.keyword");
-        TermsAggregationBuilder by_attribute_name = AggregationBuilders.terms("by_attribute_name")
-                .field("productAttributeList.attributeName.keyword")
+    private FilterAggregationBuilder createAggregations(SearchQueryDto searchQueryDto, List<String> possibleFacets) {
+        TermsAggregationBuilder by_attribute_value = AggregationBuilders.terms(BY_ATTRIBUTE_VALUE)
+                .field(PRODUCT_ATTRIBUTE_LIST_ATTRIBUTE_VALUE_KEYWORD);
+        TermsAggregationBuilder by_attribute_name = AggregationBuilders.terms(BY_ATTRIBUTE_NAME)
+                .field(PRODUCT_ATTRIBUTE_LIST_ATTRIBUTE_NAME_KEYWORD)
                 .subAggregation(by_attribute_value);
 
-        MinAggregationBuilder minPriceAgg = AggregationBuilders.min("min_price").field("price");
-        MaxAggregationBuilder maxPriceAgg = AggregationBuilders.max("max_price").field("price");
+        MinAggregationBuilder minPriceAgg = AggregationBuilders.min(MIN_PRICE).field(PRICE);
+        MaxAggregationBuilder maxPriceAgg = AggregationBuilders.max(MAX_PRICE).field(PRICE);
 
 
-        TermsQueryBuilder filterForAggregations = termsQuery("productAttributeList.attributeName.keyword", category.getPossibleFacets());
-        FilterAggregationBuilder filtered_aggregation = AggregationBuilders.filter("filtered_aggregation", filterForAggregations).subAggregation(by_attribute_name);
+        TermsQueryBuilder filterForAggregations = termsQuery(PRODUCT_ATTRIBUTE_LIST_ATTRIBUTE_NAME_KEYWORD, possibleFacets);
+        FilterAggregationBuilder filtered_aggregation = AggregationBuilders.filter(FILTERED_AGGREGATION, filterForAggregations).subAggregation(by_attribute_name);
 
-        NestedAggregationBuilder agg_all_facets_filtered = AggregationBuilders.nested("agg_all_facets_filtered", "productAttributeList").subAggregation(filtered_aggregation);
+        NestedAggregationBuilder agg_all_facets_filtered = AggregationBuilders.nested(AGG_ALL_FACETS_FILTERED, PRODUCT_ATTRIBUTE_LIST).subAggregation(filtered_aggregation);
 
         BoolQueryBuilder productAttributeList = boolQuery();
         for (Filter filter : searchQueryDto.getFilters()) {
-            productAttributeList.must(nestedQuery("productAttributeList",
+            productAttributeList.must(nestedQuery(PRODUCT_ATTRIBUTE_LIST,
                     boolQuery()
-                            .must(termQuery("productAttributeList.attributeName.keyword", filter.getKey()))
-                            .must(termQuery("productAttributeList.attributeValue.keyword", filter.getValue())),
+                            .must(termQuery(PRODUCT_ATTRIBUTE_LIST_ATTRIBUTE_NAME_KEYWORD, filter.getKey()))
+                            .must(termQuery(PRODUCT_ATTRIBUTE_LIST_ATTRIBUTE_VALUE_KEYWORD, filter.getValue())),
                     ScoreMode.None));
         }
 
-        return AggregationBuilders.filter("agg_all_facets_result_filtered", productAttributeList)
+        return AggregationBuilders.filter(AGG_ALL_FACETS_RESULT_FILTERED, productAttributeList)
                 .subAggregation(agg_all_facets_filtered).subAggregation(minPriceAgg).subAggregation(maxPriceAgg);
     }
 
@@ -154,10 +204,10 @@ public class SearchService {
         BoolQueryBuilder postFilterQuery = QueryBuilders.boolQuery();
         BoolQueryBuilder queryBuilderForFilter = boolQuery();
         for (Filter filter : searchQueryDto.getFilters()) {
-            queryBuilderForFilter.must(QueryBuilders.nestedQuery("productAttributeList",
+            queryBuilderForFilter.must(QueryBuilders.nestedQuery(PRODUCT_ATTRIBUTE_LIST,
                     boolQuery()
-                            .must(termQuery("productAttributeList.attributeName.keyword", filter.getKey()))
-                            .must(termQuery("productAttributeList.attributeValue.keyword", filter.getValue())),
+                            .must(termQuery(PRODUCT_ATTRIBUTE_LIST_ATTRIBUTE_NAME_KEYWORD, filter.getKey()))
+                            .must(termQuery(PRODUCT_ATTRIBUTE_LIST_ATTRIBUTE_VALUE_KEYWORD, filter.getValue())),
                     ScoreMode.None));
         }
         postFilterQuery.filter(queryBuilderForFilter);
@@ -172,13 +222,13 @@ public class SearchService {
 
     private QueryBuilder createFullTextSearchQuery(String textQuery, String categoryName) {
         BoolQueryBuilder queryBuilder = boolQuery();
-        if (StringUtils.isBlank(textQuery)) {
-            queryBuilder.must(QueryBuilders.multiMatchQuery(categoryName, "category.name")
-                    .minimumShouldMatch("66%")
+        if (StringUtils.isBlank(textQuery) && categoryName != null) {
+            queryBuilder.must(QueryBuilders.multiMatchQuery(categoryName, CATEGORY_NAME)
+                    .minimumShouldMatch(MINIMUM_SHOULD_MATCH)
                     .fuzziness(Fuzziness.AUTO));
         } else {
-            queryBuilder.must(QueryBuilders.multiMatchQuery(textQuery, "name", "description")
-                    .minimumShouldMatch("66%")
+            queryBuilder.must(QueryBuilders.multiMatchQuery(textQuery, NAME, DESCRIPTION)
+                    .minimumShouldMatch(MINIMUM_SHOULD_MATCH)
                     .fuzziness(Fuzziness.AUTO));
         }
         return queryBuilder;
