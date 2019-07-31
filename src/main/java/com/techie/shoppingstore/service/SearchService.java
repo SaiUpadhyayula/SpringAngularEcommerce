@@ -96,7 +96,7 @@ public class SearchService {
         BoolQueryBuilder postFilterQuery = createPostFilterQuery(searchQueryDto);
 
         SearchResponse searchResponse = performSearch(fullTextQueryBuilder, postFilterQuery, agg_all_facets_result_filtered);
-        return mapResponse(searchResponse);
+        return mapResponse(searchResponse, false);
     }
 
     public ProductSearchResponseDto search(SearchQueryDto searchQueryDto) throws IOException {
@@ -104,20 +104,21 @@ public class SearchService {
         FilterAggregationBuilder agg_all_facets_result_filtered = createAggregations(searchQueryDto, singletonList("Brand"));
         TermsAggregationBuilder by_category_value = AggregationBuilders.terms(BY_CATEGORY).field(CATEGORY_NAME_KEYWORD);
         SearchResponse searchResponse = performSearch(fullTextQueryBuilder, null, agg_all_facets_result_filtered, by_category_value);
-        return mapResponse(searchResponse);
+        return mapResponse(searchResponse, true);
     }
 
-    private ProductSearchResponseDto mapResponse(SearchResponse searchResponse) {
+    private ProductSearchResponseDto mapResponse(SearchResponse searchResponse, boolean includeCategory) {
         List<ProductDto> productDtos = extractProductHits(searchResponse);
 
         Aggregation aggregations = searchResponse.getAggregations().get(AGG_ALL_FACETS_RESULT_FILTERED);
         Map<String, Aggregation> stringAggregationMap = ((ParsedFilter) aggregations).getAggregations().asMap();
-        
+
         BigDecimal minPrice = valueOf(((ParsedMin) stringAggregationMap.get(MIN_PRICE)).getValue());
         BigDecimal maxPrice = valueOf(((ParsedMax) stringAggregationMap.get(MAX_PRICE)).getValue());
 
         List<FacetDto> facetDtos = extractResponseForFilteredAggregations(stringAggregationMap);
-        extractResponseForCategoryAggregation(searchResponse, facetDtos);
+        if (includeCategory)
+            extractResponseForCategoryAggregation(searchResponse, facetDtos);
 
         return new ProductSearchResponseDto(productDtos, minPrice, maxPrice, facetDtos);
     }
