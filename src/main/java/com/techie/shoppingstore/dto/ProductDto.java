@@ -24,4 +24,5 @@ public class ProductDto implements Serializable {
     private ProductAvailability availability;
     private List<ProductAttribute> attributeList;
     private boolean featured;
+    private List<ProductRatingDto> productRatingDtoList;
 }

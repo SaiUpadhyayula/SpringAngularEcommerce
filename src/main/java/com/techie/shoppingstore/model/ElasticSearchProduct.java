@@ -28,4 +28,5 @@ public class ElasticSearchProduct {
     private boolean featured;
     @CompletionField(maxInputLength = 100)
     private Completion suggestions;
+    private List<ProductRating> productRating;
 }
