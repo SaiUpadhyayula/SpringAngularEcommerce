@@ -37,7 +37,7 @@ This project is still in development.
 
 4. Product Page
 
-![Product Page](https://github.com/SaiUpadhyayula/NgSpringShoppingStore/blob/master/src/main/resources/images/category-page-with-filters.PNG)
+![Product Page](https://github.com/SaiUpadhyayula/NgSpringShoppingStore/blob/master/src/main/resources/images/product-page.PNG)
 
 5. Product Page - Review Section
 
