@@ -3,6 +3,8 @@ NgSpringShoppingStore is a shopping cart application developed as a pet project 
 
 This project is still in development.
 
+Code for Angular app: https://github.com/SaiUpadhyayula/NgSpringShoppingStore-frontend
+
 #Features
 - Token Based User Authentication(JWT)
 - Payment Gateway (using Stripe)
