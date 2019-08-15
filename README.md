@@ -7,14 +7,14 @@ Code for Angular app: https://github.com/SaiUpadhyayula/NgSpringShoppingStore-fr
 
 #Features
 - Token Based User Authentication(JWT)
-- Payment Gateway (using Stripe)
-- Wishlist
-- Product Catalog
-- Admin Console
-- Order Management
-- User Management
 - Product Search
-- PDF Report Generation (Order Acknowledgment)
+- Product Catalog
+- Payment Gateway (using Stripe) - TODO
+- Wishlist - TODO
+- Admin Console - TODO
+- Order Management - TODO
+- User Management - TODO
+- PDF Report Generation (Order Acknowledgment) - TODO
 
 
 #Technologies:
