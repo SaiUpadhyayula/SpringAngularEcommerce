@@ -1,5 +1,5 @@
-# NgSpringShoppingStore
-NgSpringShoppingStore is a shopping cart application developed as a pet project to get to know about different technologies.
+# SpringAngularEcommerce
+SpringAngularEcommerce is a shopping cart application developed as a pet project to get to know about different technologies.
 
 This project is still in development.
 
