@@ -58,7 +58,7 @@ public class JwtTokenProvider {
         try {
             return (PrivateKey) keyStore.getKey(AUTH_STORE, keyStorePassword.toCharArray());
         } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
-            throw new SpringStoreException("Exception occured while retrieving public key from keystore");
+            throw new SpringStoreException("Exception occurred while retrieving public key from keystore");
         }
     }
 
@@ -67,7 +67,7 @@ public class JwtTokenProvider {
             Certificate certificate = keyStore.getCertificate(AUTH_STORE);
             return certificate.getPublicKey();
         } catch (KeyStoreException e) {
-            throw new SpringStoreException("Exception occured while retrieving public key from keystore");
+            throw new SpringStoreException("Exception occurred while retrieving public key from keystore");
         }
     }
 
@@ -82,7 +82,7 @@ public class JwtTokenProvider {
 
     boolean validateToken(String authToken) {
         try {
-            Jwts.parser().setSigningKey(getPublicKey()).parseClaimsJws(authToken);
+            Jwts.parser().setSigningKey(getPrivateKey()).parseClaimsJws(authToken);
             return true;
         } catch (SignatureException ex) {
             log.error("Invalid JWT signature", ex);
